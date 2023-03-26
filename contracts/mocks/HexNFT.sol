@@ -4,9 +4,10 @@ pragma solidity 0.8.10;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "../interfaces/IERC721Consumable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "../interfaces/IERC721Hexagon.sol";
 
-contract HexNFT is IERC721Consumable, ERC721 {
+contract HexNFT is IERC721Hexagon, ERC721 {
     enum AssetStatus {
         Listed,
         Delisted
@@ -26,12 +27,50 @@ contract HexNFT is IERC721Consumable, ERC721 {
     Counters.Counter internal _total;
     mapping(uint256 => address) private _consumers;
     mapping(uint256 => Asset) private _assets;
+    mapping(address => Hexagon) public hexgrid;
+    mapping(string => address) public hexagonOwner;
+    mapping(uint256 => Hexagon) public idToHexagon;
+    mapping(uint256 => address) public idToShowNFT;
 
     constructor() ERC721("Attention Game NFT", "HexNFT") {
     }
 
-    function mint(address _to, uint256 _tokenId) public {
-        _safeMint(_to, _tokenId);
+    function isLinked(string memory q, string memory r, string memory s) public returns (bool) {
+        return true;
+    }
+
+    function distance(string memory q, string memory r, string memory s) public pure returns (uint256) {
+        bytes32 qx = keccak256(abi.encodePacked(q));
+        bytes32 rx = keccak256(abi.encodePacked(r));
+        bytes32 sx = keccak256(abi.encodePacked(s));
+        uint256 x = uint256(qx);
+        uint256 y = uint256(rx);
+        uint256 z = uint256(sx);
+        return uint256(Math.max(Math.max(x, y), z));
+    }
+
+    function mint(string memory q, string memory r, string memory s) public {
+        _total.increment();
+        _safeMint(msg.sender, _total.current());
+        Hexagon memory hexagon = Hexagon(q, r, s);
+        hexgrid[msg.sender] = hexagon;
+        string memory hexagonKey = string(abi.encodePacked("q", q, ",r", r, ",s", s));
+        hexagonOwner[hexagonKey] = msg.sender;
+        idToHexagon[_total.current()] = hexagon;
+        emit CreateHexagon(msg.sender, hexagonKey, hexagon);
+    }
+    
+    function setShowNFT(uint256 _tokenId, address _nftAddress) public {
+        address owner = ownerOf(_tokenId);
+        require(
+            owner == msg.sender,
+            "Only token owner can set showNFT"
+        );
+        idToShowNFT[_tokenId] = _nftAddress;
+    }
+
+    function showNFT(uint256 _tokenId) public view returns(address) {
+        return idToShowNFT[_tokenId];
     }
 
     function consumerOf(uint256 _tokenId) external view returns (address) {
@@ -45,12 +84,6 @@ contract HexNFT is IERC721Consumable, ERC721 {
             "Only token owner can set consumer"
         );
         _changeConsumer(owner, _consumer, _tokenId);
-    }
-
-    function generateAssets(address receiver) external {
-        _total.increment();
-        mint(receiver, _total.current());
-        _assets[_total.current()].assetId = 1;
     }
 
     /**
