@@ -1,6 +1,9 @@
 import { NetworksUserConfig } from 'hardhat/types';
 import { EtherscanConfig } from '@nomiclabs/hardhat-etherscan/dist/src/types';
 
+const PK = ''
+const INFURA_API_KEY = ''
+const ETHERSCAN_API_KEY = ''
 export const networks: NetworksUserConfig = {
     coverage: {
         url: 'http://localhost:8555',
